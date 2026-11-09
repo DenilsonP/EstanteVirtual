@@ -1,0 +1,68 @@
+package dao;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+import model.Livro;
+
+public class LivroDAO {
+    private static final String URL = "jdbc:sqlite:livros.db";
+
+    public LivroDAO() {
+        criarTabelaSeNaoExistir();
+    }
+
+    private Connection conectar() throws SQLException {
+        return DriverManager.getConnection(URL);
+    }
+
+    public void criarTabelaSeNaoExistir() {
+        String sql = """
+            CREATE TABLE IF NOT EXISTS livros (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                titulo TEXT NOT NULL,
+                autor TEXT NOT NULL,
+                paginas INTEGER NOT NULL,
+                lido TEXT NOT NULL
+            );
+            """;
+        try (Connection conn = conectar();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+        } catch (SQLException e) {
+            System.err.println("Erro ao inicializar tabela: " + e.getMessage());
+        }
+    }
+
+    public boolean inserir(Livro l) throws SQLException {
+        String sql = "INSERT INTO livros (titulo, autor, paginas, lido) VALUES (?, ?, ?, ?);";
+        try (Connection conn = conectar();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, l.getTitulo());
+            ps.setString(2, l.getAutor());
+            ps.setInt(3, l.getPaginas());
+            ps.setString(4, l.getLido());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public List<Livro> listarTodos() throws SQLException {
+        List<Livro> lista = new ArrayList<>();
+        String sql = "SELECT id, titulo, autor, paginas, lido FROM livros;";
+        try (Connection conn = conectar();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Livro l = new Livro(
+                    rs.getInt("id"),
+                    rs.getString("titulo"),
+                    rs.getString("autor"),
+                    rs.getInt("paginas"),
+                    rs.getString("lido")
+                );
+                lista.add(l);
+            }
+        }
+        return lista;
+    }
+}
